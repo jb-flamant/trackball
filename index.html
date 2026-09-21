@@ -1,0 +1,286 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Trackball 34mm — coque</title>
+<meta name="description" content="Coque de trackball paramétrique OpenSCAD : bille 34mm, PMW3610, RP2040-Zero — reconstruction indépendante à partir des STL sources de Trackball 1.5">
+<style>
+  :root{
+    --bg: #f5f6f4;
+    --surface: #ffffff;
+    --surface-2: #edeeea;
+    --border: #d6d8d1;
+    --text: #1b1d18;
+    --text-muted: #63675c;
+    --accent: #5c6e4a;
+    --accent-2: #8a6a3f;
+    --warn: #9a5b2e;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #16180f;
+      --surface: #1e2116;
+      --surface-2: #262a1c;
+      --border: #3a3f2c;
+      --text: #e9eadf;
+      --text-muted: #9ba189;
+      --accent: #9db97e;
+      --accent-2: #c79a5f;
+      --warn: #d99a5c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #16180f;
+    --surface: #1e2116;
+    --surface-2: #262a1c;
+    --border: #3a3f2c;
+    --text: #e9eadf;
+    --text-muted: #9ba189;
+    --accent: #9db97e;
+    --accent-2: #c79a5f;
+    --warn: #d99a5c;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    margin:0; padding:32px 16px 48px; line-height:1.55;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  header{
+    display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:flex-end;
+    border-bottom:1px solid var(--border); padding-bottom:20px;margin-bottom:28px;
+  }
+  h1{ font-size:1.65rem;margin:0 0 6px;letter-spacing:-0.01em;text-wrap:balance; }
+  header p{margin:0;color:var(--text-muted);max-width:56ch;font-size:0.95rem;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;max-width:300px;}
+  .chip{
+    font-family:var(--mono);font-size:0.75rem;color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 12%, transparent);
+    border:1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    padding:4px 10px;border-radius:999px;white-space:nowrap;
+  }
+
+  section{margin:38px 0;}
+  h2{
+    font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;
+    color:var(--text-muted);margin:0 0 14px;font-weight:600;
+  }
+
+  .callout{
+    background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+    border-radius:6px;padding:16px 18px;font-size:0.92rem;
+  }
+  .callout p{margin:0 0 10px;} .callout p:last-child{margin-bottom:0;}
+  .callout b{color:var(--accent);}
+
+  .warncard{
+    background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--warn);
+    border-radius:6px;padding:16px 18px;font-size:0.92rem;
+  }
+  .warncard b{color:var(--warn);}
+  .warncard p{margin:0 0 10px;} .warncard p:last-child{margin-bottom:0;}
+
+  .grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .tile img{display:block;width:100%;height:auto;background:var(--surface-2);}
+  .tile .lbl{
+    font-family:var(--mono);font-size:0.74rem;letter-spacing:0.06em;color:var(--text-muted);
+    padding:8px 10px;border-top:1px solid var(--border);text-transform:uppercase;
+  }
+
+  .sections{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .wide img{display:block;width:100%;height:auto;background:#fff;}
+  .sections .tile .lbl b{
+    color:var(--text);text-transform:none;letter-spacing:0;font-family:var(--sans);
+    font-size:0.82rem;display:block;margin-top:2px;
+  }
+
+  table.specs{width:100%;border-collapse:collapse;font-size:0.87rem;}
+  table.specs th{
+    text-align:left;color:var(--text-muted);font-weight:600;font-size:0.7rem;
+    text-transform:uppercase;letter-spacing:0.06em;padding:6px 10px;border-bottom:1px solid var(--border);
+  }
+  table.specs td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  table.specs td.val{font-family:var(--mono);white-space:nowrap;}
+  table.specs tr:last-child td{border-bottom:none;}
+  .specs-wrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow-x:auto;}
+  .tag{
+    display:inline-block;font-family:var(--mono);font-size:0.68rem;letter-spacing:0.04em;
+    padding:1px 7px;border-radius:4px;text-transform:uppercase;
+  }
+  .tag-mesure{background:color-mix(in srgb, var(--accent) 16%, transparent);color:var(--accent);}
+  .tag-datasheet{background:color-mix(in srgb, var(--accent-2) 18%, transparent);color:var(--accent-2);}
+  .tag-choix{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border);}
+
+  .todo{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 18px;}
+  .todo li{margin:12px 0;font-size:0.9rem;}
+  .todo li::marker{color:var(--accent-2);}
+
+  .filebox{
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px;
+    display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+  }
+  .filebox a{
+    font-family:var(--mono);color:var(--bg);background:var(--accent);text-decoration:none;
+    padding:8px 16px;border-radius:6px;font-size:0.85rem;font-weight:600;
+  }
+  .filebox span{color:var(--text-muted);font-size:0.85rem;}
+  .files-list{display:flex;flex-direction:column;gap:10px;}
+
+  footer{margin-top:40px;color:var(--text-muted);font-size:0.8rem;border-top:1px solid var(--border);padding-top:16px;}
+  footer a{color:var(--accent-2);}
+
+  @media (max-width:720px){
+    .grid6{grid-template-columns:repeat(2,1fr);}
+    .sections{grid-template-columns:1fr;}
+    .chips{max-width:none;}
+  }
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Trackball 34mm — PMW3610 / RP2040-Zero</h1>
+      <p>Coque paramétrique OpenSCAD dérivée de <em>Trackball&nbsp;1.5</em> (jfedor, Printables&nbsp;#131450). v7 : support de bille, embase carrée et passage de câble repris de l'original (fichier STEP), transposés à la bille Ø34 ; retenue clipsable qui empêche la bille de sortir par le haut.</p>
+    </div>
+    <div class="chips">
+      <span class="chip">Ø bille 34mm</span>
+      <span class="chip">3 billes de roulement Ø2.5</span>
+      <span class="chip">contact à 60° du nadir</span>
+      <span class="chip">PMW3610</span>
+      <span class="chip">RP2040-Zero</span>
+      <span class="chip">embase 52 × 55.75</span>
+      <span class="chip">bille clipsable</span>
+      <span class="chip">passage câble avant</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Vue d'ensemble</h2>
+    <div class="tile wide"><img src="iso.png" alt="Vue isométrique de l'assemblage"><div class="lbl">Isométrique — bille et billes de roulement en référence</div></div>
+  </section>
+
+  <section>
+    <h2>Support de bille — original vs v7</h2>
+    <div class="tile wide"><img src="comparaison_support_bille.png" alt="Coupe comparative original / v4"><div class="lbl">Coupe X=0 par le poteau arrière, alignée sur le centre de la bille</div></div>
+    <div class="callout" style="margin-top:14px">
+      <p><b>Source des cotes.</b> Le fichier <code>Trackball15.step</code> contient l'assemblage complet, bille comprise (Ø38, centre Z=26.4). Les surfaces analytiques de la coque haute (sphères, cylindres, axes) ont été lues avec cadquery : ce sont des valeurs exactes, pas des estimations sur maillage.</p>
+      <p><b>Principe repris.</b> Trois billes de roulement Ø2.5 posées au fond de logements borgnes Ø2.6, dans l'axe du centre de la bille, à 60° du nadir, azimuts 30/150/270. Chaque bille de roulement dépasse de 0.625mm de la face du poteau et porte la bille (tripode). Les poteaux sont des murs de 10mm qui montent jusqu'à l'équateur : ils assurent la retenue latérale. La calotte, à 0.625mm de jeu, ne touche pas.</p>
+      <p><b>Vérifié sur le STL exporté</b> (trimesh) : fond des 3 logements à r=19.500, rayon 1.300 ; billes de roulement tangentes à la bille (r=18.25 − 1.25 = 17.0) ; aucune matière à moins de 17.60mm du centre ; pièces étanches, un seul corps chacune.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Retenue clipsable</h2>
+    <div class="sections">
+      <div class="tile"><img src="detail_levre.png" alt="Profil de la lèvre de retenue"><div class="lbl">Profil de la lèvre <b>coupe X=0, poteau arrière</b></div></div>
+      <div class="tile"><img src="iso_top_only.png" alt="Coque haute avec les trois languettes"><div class="lbl">Coque haute <b>3 languettes au sommet des poteaux</b></div></div>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <p><b>Principe.</b> Chaque poteau se prolonge au-dessus de l'équateur par une languette souple (6mm de large, 1.6mm d'épaisseur) terminée par une lèvre arrondie. L'ouverture entre les trois lèvres fait Ø33.46, soit 0.27mm de moins par côté que la bille : on la clipse en appuyant (rampe d'entrée à 45°), on la retire en tirant (face inférieure en pente), comme la bague de la Kensington Orbit.</p>
+      <p><b>Vérifié par calcul de distance</b> entre la surface de la bille et la pièce : au repos, 0.19mm de jeu avec les lèvres, la bille ne touche que les 3 billes de roulement ; elle peut se soulever d'environ 0.95mm, puis bute. Effort estimé pour la clipser ou la retirer : ≈20N au total, déformation de 1.6% dans les languettes (PETG conseillé, le PLA est à la limite).</p>
+      <p><b>Réglage.</b> <code>lip_interf</code> (interférence, 0.3 nominal), <code>lip_finger_t</code> (raideur), <code>lip_clear</code> (jeu au repos). Retrait : pas d'accès par dessous comme sur l'Orbit (le capteur est sous la bille) ; on pince la bille entre deux poteaux.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Embase carrée et passage de câble — original vs v7</h2>
+    <div class="sections">
+      <div class="tile"><img src="comparaison_embase.png" alt="Superposition des bacs original / v7"><div class="lbl">Bacs superposés <b>alignés sur l'axe de la bille, 2mm sous le plan de joint</b></div></div>
+      <div class="tile"><img src="passage_cable.png" alt="Encoche de passage de câble dans la paroi avant"><div class="lbl">Passage de câble <b>paroi avant du bac, refermé par la coque haute</b></div></div>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <p><b>Repris de l'original.</b> Corps rectangulaire de 52mm de large (x ±26), angles R8, parois et fond de 2mm, bord de plaque vertical sur 1mm puis chanfrein à 45° sur 3mm. Les poteaux avant rejoignent les angles et débordent de 1mm (angles R9). Quatre vis M3 aux centres d'angle, montées par dessous avec fraisage dans le fond, taraudées dans la coque haute (trou pilote Ø2.8 : 8mm dans les poteaux avant, 3.5mm dans la plaque à l'arrière).</p>
+      <p><b>Passage de câble.</b> Encoche en U dans la paroi avant du bac (côté bille), à la même place que sur l'original : centrée à x = −12, largeur 5mm, fond en demi-cercle R2.5 à 5.5mm sous le plan de joint (Z 7.6 à 13.1 ici). La coque haute referme l'encoche par dessus, comme sur l'original.</p>
+      <p><b>Adapté.</b> La profondeur passe de 54 à 55.75mm (bord avant à 18.5 au lieu de 18, arrière à −37.25 au lieu de −36) pour loger le PMW3610 en long, centré sous la bille, et le RP2040-Zero en travers derrière lui. Avec une bille plus petite, le poteau arrière s'arrête sur le chanfrein au lieu de dépasser de 1mm à l'arrière.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Vues orthographiques</h2>
+    <div class="grid6">
+      <div class="tile"><img src="view_face.png" alt="Vue de face"><div class="lbl">Face</div></div>
+      <div class="tile"><img src="view_dos.png" alt="Vue de dos"><div class="lbl">Dos</div></div>
+      <div class="tile"><img src="view_haut.png" alt="Vue de dessus"><div class="lbl">Haut</div></div>
+      <div class="tile"><img src="view_gauche.png" alt="Vue de gauche"><div class="lbl">Gauche</div></div>
+      <div class="tile"><img src="view_droite.png" alt="Vue de droite"><div class="lbl">Droite</div></div>
+      <div class="tile"><img src="view_bas.png" alt="Vue de dessous"><div class="lbl">Bas</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Coupes</h2>
+    <div class="sections">
+      <div class="tile">
+        <img src="section_horizontale.png" alt="Coupe horizontale">
+        <div class="lbl">Coupe horizontale <b>Z = nez des lèvres (+4mm au-dessus de l'équateur) — 3 lèvres autour de la bille</b></div>
+      </div>
+      <div class="tile">
+        <img src="section_verticale.png" alt="Coupe verticale">
+        <div class="lbl">Coupe verticale <b>X = 0 — poteau arrière et son logement, calotte, bac électronique</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cotes clés</h2>
+    <div class="specs-wrap">
+      <table class="specs">
+        <tr><th>Paramètre</th><th>Original Ø38</th><th>v4 Ø34</th><th>Origine</th></tr>
+        <tr><td>Rayon calotte / face interne poteaux</td><td class="val">19.625</td><td class="val">17.625</td><td><span class="tag tag-mesure">STEP</span> R + 0.625</td></tr>
+        <tr><td>Billes de roulement</td><td class="val">Ø2.5</td><td class="val">Ø2.5</td><td><span class="tag tag-mesure">STEP</span> logement Ø2.6 à fond plat</td></tr>
+        <tr><td>Angle des paliers (nadir)</td><td class="val">60°</td><td class="val">60°</td><td><span class="tag tag-mesure">STEP</span></td></tr>
+        <tr><td>Azimuts</td><td class="val">30/150/270°</td><td class="val">30/150/270°</td><td><span class="tag tag-mesure">STEP</span> 270° côté queue</td></tr>
+        <tr><td>Centre bille de roulement</td><td class="val">r 20.25</td><td class="val">r 18.25</td><td><span class="tag tag-mesure">STEP</span> R + 1.25</td></tr>
+        <tr><td>Fond du logement</td><td class="val">r 21.5</td><td class="val">r 19.5</td><td><span class="tag tag-mesure">STEP</span> R + 2.5</td></tr>
+        <tr><td>Poteaux</td><td class="val">10mm, jusqu'à l'équateur</td><td class="val">idem</td><td><span class="tag tag-mesure">STEP</span> sommet plat 2mm, pente 45°</td></tr>
+        <tr><td>Plaque haute</td><td class="val">4mm</td><td class="val">4mm</td><td><span class="tag tag-mesure">STEP</span></td></tr>
+        <tr><td>Retenue verticale</td><td class="val">aucune (bille libre)</td><td class="val">3 lèvres, Ø33.46, clipsable</td><td><span class="tag tag-choix">choix v6</span> ≈20N, levée libre 0.95</td></tr>
+        <tr><td>Passage de câble</td><td class="val">U 5mm, x −12, avant</td><td class="val">idem</td><td><span class="tag tag-mesure">STEP</span> fond R2.5 à 5.5 sous le joint</td></tr>
+        <tr><td>Plan de joint</td><td class="val">0.4 sous pôle sud</td><td class="val">Z 13.1</td><td><span class="tag tag-mesure">STEP</span></td></tr>
+        <tr><td>Ouverture optique</td><td class="val">Ø10</td><td class="val">Ø10</td><td><span class="tag tag-mesure">STEP</span> à revoir pour la lentille PMW3610</td></tr>
+        <tr><td>Dessus PCB → pôle sud bille</td><td class="val">5.8 (PMW3360)</td><td class="val">7.40</td><td><span class="tag tag-datasheet">datasheet</span> PMW3610 Fig.4</td></tr>
+        <tr><td>Centre bille (Z depuis dessous du bac)</td><td class="val">—</td><td class="val">30.5</td><td>calculé</td></tr>
+        <tr><td>PMW3610 breakout</td><td class="val">—</td><td class="val">23.5×31.5, M3 17.5×25.5</td><td><span class="tag tag-mesure">plan coté</span></td></tr>
+        <tr><td>RP2040-Zero</td><td class="val">—</td><td class="val">18×24</td><td><span class="tag tag-mesure">fiche vendeur</span></td></tr>
+        <tr><td>Embase</td><td class="val">52×54, R8</td><td class="val">52×55.75, R8</td><td><span class="tag tag-mesure">STEP</span> profondeur ajustée aux cartes</td></tr>
+        <tr><td>Parois / fond du bac</td><td class="val">2 / 2</td><td class="val">2 / 2</td><td><span class="tag tag-mesure">STEP</span></td></tr>
+        <tr><td>Chanfrein plaque</td><td class="val">1 vertical + 3 à 45°</td><td class="val">idem</td><td><span class="tag tag-mesure">STEP</span></td></tr>
+        <tr><td>Vis d'assemblage</td><td class="val">M3 par dessous, pilote Ø2.8</td><td class="val">4× M3 fraisées par dessous, pilote Ø2.8</td><td><span class="tag tag-mesure">STEP</span> centres d'angle</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reste à faire avant impression définitive</h2>
+    <ul class="todo">
+      <li>Support lentille LM18-LSI / PMW3610 (guide posts du datasheet) non modélisé ; l'ouverture Ø10 est celle de l'original.</li>
+      <li>Hauteur composants + USB-C du RP2040-Zero (3.5mm) : hypothèse, contrôlée par un <code>assert()</code> sur le plan de joint.</li>
+      <li>Câble : le passage Ø5 laisse passer un câble, pas une fiche USB-C. Le RP2040-Zero n'expose l'USB que par son connecteur : il faut une fiche USB-C coudée ou très courte à l'intérieur (orienter le connecteur de la carte vers la gauche, côté passage ; environ 11mm libres jusqu'à la paroi), le câble longeant la paroi gauche au-dessus du PMW3610.</li>
+      <li>Colonnettes PMW3610 simples (Ø6) ; le dégagement sous le capteur (poche 15×22 dans le fond de l'original) n'est pas repris.</li>
+      <li>Maintien du RP2040-Zero par friction + point de colle.</li>
+      <li>Imprimer d'abord un coupon plaque + 3 poteaux pour valider le roulement de la bille et l'effort de clipsage ; ajuster <code>lip_interf</code> (±0.1) selon l'imprimante et la matière.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Fichiers</h2>
+    <div class="files-list">
+      <div class="filebox">
+        <span><code>trackball.scad</code> — modèle paramétrique (OpenSCAD 2021.01), variable <code>RENDER</code> : assembly | top | bottom | section_h | section_v. Les STL (haut, bac) sont fournis séparément dans la conversation.</span>
+        <a href="trackball.scad">Ouvrir</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Base : <a href="https://www.printables.com/model/131450-trackball-15" target="_blank" rel="noopener">Trackball 1.5, jfedor (Printables #131450)</a> ·
+    Breakout : <a href="https://github.com/siderakb/pmw3610-pcb" target="_blank" rel="noopener">siderakb/pmw3610-pcb</a>
+  </footer>
+</div>
+
+</body></html>
