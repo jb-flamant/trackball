@@ -1,6 +1,6 @@
 /*
- * Overlay carte : RP2040-Zero + PMW3610
- * -------------------------------------
+ * Overlay carte : RP2040-Zero + PMW3610 (souris HID USB)
+ * ------------------------------------------------------
  * Reprend le pinctrl `spi0_default` fourni par la carte (rp2040_zero-pinctrl.dtsi) :
  *     SCK          = GP6   (SPI0_SCK_P6)
  *     MOSI (TX)    = GP3   (SPI0_TX_P3)
@@ -14,8 +14,6 @@
  * Lignes de controle (GPIO) choisies sur des broches libres du RP2040-Zero :
  *     NCS    = GP5   (chip select, actif bas)
  *     MOTION = GP7   (interruption capteur, actif bas, pull-up)
- *
- * Console de debug redirigee sur l'USB CDC-ACM (pas d'UART cablee en facade).
  */
 
 #include <zephyr/dt-bindings/gpio/gpio.h>
@@ -38,7 +36,18 @@
 	};
 };
 
-/* Console sur USB CDC-ACM */
+/* Souris HID (nouveau stack USB device_next) */
+/ {
+	hid_dev_0: hid_dev_0 {
+		compatible = "zephyr,hid-device";
+		label = "HID0";
+		protocol-code = "none";
+		in-polling-period-us = <1000>;   /* 1 kHz */
+		in-report-size = <8>;
+	};
+};
+
+/* Console de debug sur USB CDC-ACM (pas d'UART cablee en facade) */
 &zephyr_udc0 {
 	cdc_acm_uart0: cdc_acm_uart0 {
 		compatible = "zephyr,cdc-acm-uart";
@@ -48,6 +57,5 @@
 / {
 	chosen {
 		zephyr,console = &cdc_acm_uart0;
-		zephyr,shell-uart = &cdc_acm_uart0;
 	};
 };

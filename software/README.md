@@ -1,9 +1,21 @@
 # Firmware — Trackball RP2040-Zero + PMW3610 (Zephyr)
 
-Firmware Zephyr reliant le capteur optique **PMW3610** au **RP2040-Zero**. Cette
-première étape valide la liaison MCU ↔ capteur : le déplacement de la bille est lu
-via le sous-système `input` de Zephyr et journalisé sur la console USB. L'étape HID
-souris viendra ensuite.
+Firmware Zephyr transformant le capteur optique **PMW3610** en **souris HID USB**
+sur **RP2040-Zero**. Le déplacement de la bille est lu via le sous-système `input`
+de Zephyr (évènements `INPUT_REL_X` / `INPUT_REL_Y` émis par le driver), converti
+en rapports de souris HID, puis transmis à l'hôte par l'USB. Une console de debug
+est exposée en parallèle sur une CDC-ACM (périphérique USB composite).
+
+## Versions figées
+
+| Composant | Révision |
+| --- | --- |
+| Zephyr | `v4.4.0` (dernière stable, avril 2026) |
+| `zmk-pmw3610-driver` | commit `44b4a76` |
+
+Le stack USB **legacy** (`CONFIG_USB_DEVICE_STACK`) étant déprécié et supprimé en
+Zephyr 4.5, le firmware utilise directement le **nouveau stack** `device_next`
+(`CONFIG_USB_DEVICE_STACK_NEXT`).
 
 ## Faisabilité de l'architecture
 
@@ -23,8 +35,11 @@ Vérifiée avant d'écrire le code :
    risque d'intégration ; à traiter au premier `west build`.
 2. **SPI half-duplex.** Le pont MOSI↔MISO sur la broche SDIO doit être fait côté
    carte. Alternative plus propre sur RP2040 : implémenter le SPI en **PIO**.
-3. **Console USB.** Le label `zephyr_udc0` et le nœud CDC-ACM sont à confirmer selon
-   la version de Zephyr figée.
+3. **VID/PID.** `src/usb.c` utilise une paire de TEST (`0x1209/0x0001`, pid.codes) —
+   **à remplacer** avant toute distribution.
+4. **Non compilé.** Le squelette a été rédigé sans SDK Zephyr disponible ; premier
+   `west build` = première compilation. Le `sync` des évènements input du driver et
+   le fonctionnement de la console CDC composite sont à confirmer sur cible.
 
 ## Câblage (overlay `boards/rp2040_zero.overlay`)
 
@@ -43,12 +58,14 @@ Reprend le `spi0_default` de la carte :
 ```
 software/
 ├── CMakeLists.txt
-├── prj.conf                     # Kconfig : SPI, INPUT, USB CDC, CONFIG_PMW3610_ALT
-├── west.yml                     # manifeste : Zephyr + module PMW3610
+├── prj.conf                     # Kconfig : SPI, INPUT, USB device_next (HID+CDC)
+├── west.yml                     # manifeste : Zephyr v4.4.0 + module PMW3610
 ├── boards/
-│   └── rp2040_zero.overlay      # câblage capteur + console USB
+│   └── rp2040_zero.overlay      # câblage capteur + noeud HID + console CDC
 └── src/
-    └── main.c                   # lit les évènements input, journalise dx/dy
+    ├── main.c                   # input → rapports souris HID
+    ├── usb.c                    # contexte USB device_next (HID + CDC-ACM)
+    └── usb.h
 ```
 
 ## Compilation
@@ -69,8 +86,12 @@ west build -b rp2040_zero software
 west flash
 ```
 
+Une fois flashé, la carte énumère comme souris USB *et* comme port série virtuel
+(console de debug).
+
 ## Références
 
 - [Driver PMW3610 — badjeff/zmk-pmw3610-driver](https://github.com/badjeff/zmk-pmw3610-driver)
 - [Carte RP2040-Zero — documentation Zephyr](https://docs.zephyrproject.org/latest/boards/waveshare/rp2040_zero/doc/index.html)
+- [Sample HID souris (device_next) — Zephyr](https://github.com/zephyrproject-rtos/zephyr/tree/v4.4.0/samples/subsys/usb/hid-mouse)
 - [Breakout PMW3610 — siderakb/pmw3610-pcb](https://github.com/siderakb/pmw3610-pcb)

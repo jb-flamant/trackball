@@ -1,77 +1,157 @@
 /*
- * Trackball RP2040-Zero + PMW3610 — squelette firmware Zephyr
+ * Trackball RP2040-Zero + PMW3610 — souris HID USB (Zephyr, stack device_next)
  *
  * Le driver PMW3610 (module hors-arbre) publie le deplacement de la bille dans le
  * sous-systeme `input` sous forme d'evenements relatifs INPUT_REL_X / INPUT_REL_Y.
- * Ce main se contente, pour cette premiere etape, d'accumuler ces deltas et de les
- * journaliser sur la console USB : de quoi valider la liaison MCU <-> capteur.
- *
- * Etape suivante (non incluse) : exposer une souris HID USB a partir de ces deltas.
+ * On les convertit en rapports de souris HID (boutons, X, Y, molette) transmis a
+ * l'hote par l'USB. Un lot d'evenements est clos par le drapeau `sync`, ce qui
+ * permet de regrouper X et Y dans un meme rapport.
  */
+
+#include "usb.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/input/input.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/usb/usbd.h>
+#include <zephyr/usb/class/usbd_hid.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/atomic.h>
-#include <zephyr/usb/usb_device.h>
 
-LOG_MODULE_REGISTER(trackball, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
-#define PMW3610_NODE DT_NODELABEL(pmw3610)
-BUILD_ASSERT(DT_NODE_EXISTS(PMW3610_NODE),
-	     "Noeud pmw3610 absent : verifier l'overlay de la carte.");
+/* Descripteur de rapport : souris a 2 boutons + X/Y/molette relatifs. */
+static const uint8_t hid_report_desc[] = HID_MOUSE_REPORT_DESC(2);
 
-/* Deltas accumules entre deux releves du fil principal. */
-static atomic_t rel_x;
-static atomic_t rel_y;
+enum mouse_report_idx {
+	MOUSE_BTN_REPORT_IDX = 0,
+	MOUSE_X_REPORT_IDX = 1,
+	MOUSE_Y_REPORT_IDX = 2,
+	MOUSE_WHEEL_REPORT_IDX = 3,
+	MOUSE_REPORT_COUNT = 4,
+};
 
-/* Callback appele par le sous-systeme input pour chaque evenement du capteur. */
-static void pmw3610_cb(struct input_event *evt, void *user_data)
+/* File des rapports prets a emettre (producteur : input_cb ; conso : main). */
+K_MSGQ_DEFINE(mouse_msgq, MOUSE_REPORT_COUNT, 8, 1);
+
+static const struct device *hid_dev;
+static bool mouse_ready;
+
+/* Borne un delta au domaine signe 8 bits du rapport HID. */
+static inline uint8_t clamp_delta(int32_t v)
 {
+	if (v > 127) {
+		v = 127;
+	} else if (v < -127) {
+		v = -127;
+	}
+	return (uint8_t)(int8_t)v;
+}
+
+/* Callback du sous-systeme input : accumule X/Y puis emet a la cloture (sync). */
+static void input_cb(struct input_event *evt, void *user_data)
+{
+	static uint8_t report[MOUSE_REPORT_COUNT];
+
 	ARG_UNUSED(user_data);
 
 	switch (evt->code) {
 	case INPUT_REL_X:
-		atomic_add(&rel_x, evt->value);
+		report[MOUSE_X_REPORT_IDX] = clamp_delta(evt->value);
 		break;
 	case INPUT_REL_Y:
-		atomic_add(&rel_y, evt->value);
+		report[MOUSE_Y_REPORT_IDX] = clamp_delta(evt->value);
 		break;
 	default:
-		break;
+		return;
 	}
+
+	if (!evt->sync) {
+		return;   /* lot incomplet : on attend le dernier evenement */
+	}
+
+	if (k_msgq_put(&mouse_msgq, report, K_NO_WAIT) != 0) {
+		LOG_WRN("File de rapports pleine, mouvement perdu");
+	}
+
+	report[MOUSE_X_REPORT_IDX] = 0U;
+	report[MOUSE_Y_REPORT_IDX] = 0U;
 }
-INPUT_CALLBACK_DEFINE(DEVICE_DT_GET(PMW3610_NODE), pmw3610_cb, NULL);
+INPUT_CALLBACK_DEFINE(NULL, input_cb, NULL);
+
+static void mouse_iface_ready(const struct device *dev, const bool ready)
+{
+	LOG_INF("Interface HID %s : %s", dev->name, ready ? "prete" : "non prete");
+	mouse_ready = ready;
+}
+
+static int mouse_get_report(const struct device *dev, const uint8_t type,
+			    const uint8_t id, const uint16_t len, uint8_t *const buf)
+{
+	ARG_UNUSED(dev);
+	ARG_UNUSED(type);
+	ARG_UNUSED(id);
+	ARG_UNUSED(len);
+	ARG_UNUSED(buf);
+	return 0;
+}
+
+static struct hid_device_ops mouse_ops = {
+	.iface_ready = mouse_iface_ready,
+	.get_report = mouse_get_report,
+};
 
 int main(void)
 {
-	const struct device *const sensor = DEVICE_DT_GET(PMW3610_NODE);
+	const struct device *const sensor = DEVICE_DT_GET(DT_NODELABEL(pmw3610));
+	struct usbd_context *usbd;
+	int ret;
 
-	/* Console USB CDC-ACM (voir chosen zephyr,console dans l'overlay). */
-	if (usb_enable(NULL)) {
-		LOG_ERR("Echec de l'initialisation USB");
+	hid_dev = DEVICE_DT_GET_ONE(zephyr_hid_device);
+	if (!device_is_ready(hid_dev)) {
+		LOG_ERR("Peripherique HID non pret");
 		return -EIO;
 	}
-	/* Laisse le temps a l'hote d'ouvrir le port serie virtuel. */
-	k_sleep(K_SECONDS(2));
-
-	LOG_INF("Trackball RP2040-Zero + PMW3610 : demarrage");
 
 	if (!device_is_ready(sensor)) {
 		LOG_ERR("Capteur PMW3610 non pret");
 		return -ENODEV;
 	}
-	LOG_INF("Capteur PMW3610 pret ; en attente de mouvement");
 
-	while (1) {
-		const int dx = (int)atomic_set(&rel_x, 0);
-		const int dy = (int)atomic_set(&rel_y, 0);
+	ret = hid_device_register(hid_dev, hid_report_desc,
+				  sizeof(hid_report_desc), &mouse_ops);
+	if (ret != 0) {
+		LOG_ERR("Enregistrement du peripherique HID (%d)", ret);
+		return ret;
+	}
 
-		if (dx != 0 || dy != 0) {
-			LOG_INF("dx=%d dy=%d", dx, dy);
+	usbd = app_usbd_init();
+	if (usbd == NULL) {
+		LOG_ERR("Initialisation USB echouee");
+		return -ENODEV;
+	}
+
+	ret = usbd_enable(usbd);
+	if (ret != 0) {
+		LOG_ERR("usbd_enable (%d)", ret);
+		return ret;
+	}
+
+	LOG_INF("Trackball pret : souris HID USB active");
+
+	while (true) {
+		UDC_STATIC_BUF_DEFINE(report, MOUSE_REPORT_COUNT);
+
+		k_msgq_get(&mouse_msgq, &report, K_FOREVER);
+
+		if (!mouse_ready) {
+			continue;   /* hote non connecte : on ignore le mouvement */
 		}
-		k_sleep(K_MSEC(50));
+
+		ret = hid_device_submit_report(hid_dev, MOUSE_REPORT_COUNT, report);
+		if (ret != 0) {
+			LOG_ERR("Envoi du rapport HID (%d)", ret);
+		}
 	}
 
 	return 0;
