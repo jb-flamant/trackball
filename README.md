@@ -24,7 +24,14 @@ exactes), puis transposées à la bille Ø34.
 - Logements dédiés pour le breakout **PMW3610** (en long, optique centrée sous
   la bille) et le **RP2040-Zero** (en travers, derrière).
 
-## Fichiers
+## Organisation du dépôt
+
+| Dossier | Contenu |
+| --- | --- |
+| `hardware/` | Modèle 3D et documentation associée. |
+| `software/` | Firmware (Zephyr / RP2040) — à venir. |
+
+### `hardware/`
 
 | Fichier | Description |
 | --- | --- |
@@ -34,7 +41,7 @@ exactes), puis transposées à la bille Ø34.
 
 ## Utilisation
 
-Ouvrir `trackball.scad` dans [OpenSCAD](https://openscad.org/) (≥ 2021.01). La
+Ouvrir `hardware/trackball.scad` dans [OpenSCAD](https://openscad.org/) (≥ 2021.01). La
 variable `RENDER` sélectionne la pièce ou la vue à générer :
 
 | Valeur | Rendu |
@@ -54,7 +61,7 @@ languettes de retenue).
 
 ## Reste à faire
 
-Voir la section « Reste à faire avant impression définitive » de `index.html` :
+Voir la section « Reste à faire avant impression définitive » de `hardware/index.html` :
 support de lentille LM18-LSI/PMW3610 non modélisé, hypothèses sur la hauteur du
 RP2040-Zero et le passage USB-C, coupon d'essai plaque + 3 poteaux recommandé
 avant l'impression complète.
