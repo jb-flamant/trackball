@@ -17,6 +17,7 @@
  */
 
 #include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
 
 &spi0 {
 	status = "okay";
@@ -28,6 +29,12 @@
 		spi-max-frequency = <2000000>;   /* PMW3610 : SCLK <= 2 MHz */
 		irq-gpios = <&gpio0 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 		cpi = <800>;                     /* resolution ; a ajuster */
+
+		/* Evenements publies dans le sous-systeme input (requis) */
+		evt-type = <INPUT_EV_REL>;
+		x-input-code = <INPUT_REL_X>;
+		y-input-code = <INPUT_REL_Y>;
+
 		/* Orientation (a regler une fois la carte montee) :
 		 * swap-xy;
 		 * invert-x;
