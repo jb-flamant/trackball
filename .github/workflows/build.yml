@@ -1,0 +1,55 @@
+name: firmware-build
+
+# Compile le firmware Zephyr (software/) pour le RP2040-Zero.
+# L'application est un espace de travail west en topologie T2 (manifeste dans
+# software/west.yml, revisions figees : Zephyr v4.4.0 + driver PMW3610).
+
+on:
+  push:
+    paths:
+      - 'software/**'
+      - '.github/workflows/build.yml'
+  pull_request:
+    paths:
+      - 'software/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Installe le SDK Zephyr, west, et recupere Zephyr + les modules
+      # (dont le driver PMW3610) d'apres software/west.yml.
+      - name: Setup Zephyr project
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: software
+          toolchains: arm-zephyr-eabi
+
+      - name: Build (rp2040_zero)
+        id: build
+        # NON BLOQUANT pour l'instant : tant que le couplage ZMK du driver
+        # PMW3610 n'est pas traite (voir software/README.md), ce build peut
+        # echouer. Le journal reste consultable. Retirer `continue-on-error`
+        # une fois le probleme resolu pour rendre la CI bloquante.
+        continue-on-error: true
+        run: west build -p always -b rp2040_zero software
+
+      - name: Upload firmware artifacts
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trackball-rp2040_zero
+          path: |
+            build/zephyr/zephyr.uf2
+            build/zephyr/zephyr.elf
+          if-no-files-found: warn

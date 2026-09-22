@@ -24,4 +24,6 @@ manifest:
       path: modules/pmw3610
 
   self:
-    path: application
+    # Doit correspondre au nom du dossier de l'application dans l'espace de
+    # travail (west init -l software).
+    path: software

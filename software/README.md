@@ -89,6 +89,15 @@ west flash
 Une fois flashé, la carte énumère comme souris USB *et* comme port série virtuel
 (console de debug).
 
+## Intégration continue
+
+Le workflow `.github/workflows/build.yml` compile le firmware pour `rp2040_zero`
+sur un runner GitHub (action officielle `zephyrproject-rtos/action-zephyr-setup`,
+toolchain `arm-zephyr-eabi`) et publie les artefacts `zephyr.uf2` / `zephyr.elf`.
+L'étape de build est pour l'instant **non bloquante** (`continue-on-error`) : elle
+sert à exercer le couplage ZMK du driver ; retirer ce drapeau une fois le point
+résolu pour rendre la CI bloquante.
+
 ## Références
 
 - [Driver PMW3610 — badjeff/zmk-pmw3610-driver](https://github.com/badjeff/zmk-pmw3610-driver)
