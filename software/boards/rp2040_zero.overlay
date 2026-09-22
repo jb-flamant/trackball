@@ -17,20 +17,23 @@
  */
 
 #include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
 
 &spi0 {
 	status = "okay";
 	cs-gpios = <&gpio0 5 GPIO_ACTIVE_LOW>;
 
+	/* Driver PMW3610 fourni en amont par Zephyr (drivers/input). */
 	pmw3610: pmw3610@0 {
 		compatible = "pixart,pmw3610";
 		reg = <0>;
 		spi-max-frequency = <2000000>;   /* PMW3610 : SCLK <= 2 MHz */
-		irq-gpios = <&gpio0 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-		cpi = <800>;                     /* resolution ; a ajuster */
+		motion-gpios = <&gpio0 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		res-cpi = <800>;                 /* resolution ; a ajuster */
+		zephyr,axis-x = <INPUT_REL_X>;
+		zephyr,axis-y = <INPUT_REL_Y>;
 
 		/* Orientation (a regler une fois la carte montee) :
-		 * swap-xy;
 		 * invert-x;
 		 * invert-y;
 		 */

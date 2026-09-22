@@ -1,13 +1,14 @@
 # Firmware — Trackball RP2040-Zero + PMW3610 (Zephyr)
 
 Firmware Zephyr transformant le capteur optique **PMW3610** en **souris HID USB**
-sur **RP2040-Zero**. Le capteur est piloté par un **driver Zephyr natif** qui publie
-le déplacement de la bille dans le sous-système `input` (`INPUT_REL_X` /
-`INPUT_REL_Y`) ; l'application convertit ces évènements en rapports de souris HID
-transmis à l'hôte par l'USB. Une console de debug est exposée en parallèle sur une
-CDC-ACM (périphérique USB composite).
+sur **RP2040-Zero**. Le capteur est piloté par le **driver PMW3610 fourni en amont
+par Zephyr** (`drivers/input`), qui publie le déplacement de la bille dans le
+sous-système `input` (`INPUT_REL_X` / `INPUT_REL_Y`) ; l'application convertit ces
+évènements en rapports de souris HID transmis à l'hôte par l'USB. Une console de
+debug est exposée en parallèle sur une CDC-ACM (périphérique USB composite).
 
-Aucune dépendance à ZMK ni à un module hors-arbre : tout est du **Zephyr pur**.
+Aucune dépendance à ZMK ni à un module hors-arbre : tout est du **Zephyr pur**, et
+le driver du capteur est **in-tree** (maintenu par le projet Zephyr).
 
 ## Versions figées
 
@@ -19,27 +20,25 @@ Le stack USB **legacy** (`CONFIG_USB_DEVICE_STACK`) étant déprécié et suppri
 Zephyr 4.5, le firmware utilise directement le **nouveau stack** `device_next`
 (`CONFIG_USB_DEVICE_STACK_NEXT`).
 
-## Driver PMW3610 natif
+## Driver PMW3610
 
-`drivers/pmw3610.c` + binding `dts/bindings/input/pixart,pmw3610.yaml`
-(compatible `pixart,pmw3610`). Points clés, conformes à la fiche technique :
+Fourni par Zephyr (`CONFIG_INPUT_PMW3610`, compatible `pixart,pmw3610`). Configuré
+via le devicetree (overlay) :
 
-- SPI mode 3, `SCLK ≤ 2 MHz` ; écriture (adresse MSB=1) / lecture (adresse MSB=0
-  puis lecture sur SDIO) avec activation/coupure de l'horloge interne du capteur.
-- Init non bloquante : power-up reset → self-test (registre d'observation) +
-  vérification de l'identifiant produit (`0x3E`) → effacement des registres de
-  mouvement → réglage du CPI.
-- Lecture pilotée par l'interruption MOTION (niveau actif), burst de 7 octets,
-  décodage des deltas X/Y en complément à deux sur 12 bits, publication via
-  `input_report_rel`.
-- Propriétés devicetree : `cpi` (défaut 800), `swap-xy`, `invert-x`, `invert-y`.
+- `motion-gpios` : ligne d'interruption MOTION (active bas).
+- `res-cpi` : résolution (défaut 800, plage 200-3200).
+- `zephyr,axis-x` / `zephyr,axis-y` : codes d'évènement publiés (`INPUT_REL_X/Y`).
+- `invert-x` / `invert-y`, `force-awake`, `smart-mode` : options facultatives.
+
+Le driver expose aussi des API runtime (`pmw3610_set_resolution()`,
+`pmw3610_force_awake()`) non utilisées ici.
 
 ## Faisabilité de l'architecture
 
 | Élément | État | Détail |
 | --- | --- | --- |
 | RP2040-Zero sous Zephyr | ✅ supporté en amont | Carte `rp2040_zero` (Waveshare) intégrée à Zephyr. |
-| Driver PMW3610 | ✅ natif | Écrit pour ce projet (`drivers/pmw3610.c`), sans ZMK ni module externe. |
+| Driver PMW3610 | ✅ en amont | Driver `drivers/input` officiel (Zephyr ≥ 4.4), sans ZMK ni module externe. |
 | Liaison électrique | ⚠️ point d'attention | Le PMW3610 est un **SPI 3 fils half-duplex** (une seule broche de données SDIO) ; le RP2040 est full-duplex → MOSI et MISO à ponter sur SDIO (voir overlay). |
 
 ### Points à valider sur matériel
@@ -48,11 +47,9 @@ Zephyr 4.5, le firmware utilise directement le **nouveau stack** `device_next`
    carte. Alternative plus propre sur RP2040 : implémenter le SPI en **PIO**.
 2. **VID/PID.** `src/usb.c` utilise une paire de TEST (`0x1209/0x0001`, pid.codes) —
    **à remplacer** avant toute distribution.
-3. **Non testé sur cible.** Le code compile en CI mais n'a pas encore tourné sur un
-   PMW3610 réel : le décodage des deltas et le sens des axes sont à confirmer (puis
-   ajuster `cpi` / `swap-xy` / `invert-*`). Les modes de veille avancés du capteur
-   (downshift, rest rates) ne sont pas configurés — les valeurs par défaut du capteur
-   s'appliquent.
+3. **Non testé sur cible.** Le firmware compile en CI mais n'a pas encore tourné sur
+   un PMW3610 réel : sens des axes et `res-cpi` à confirmer (puis ajuster
+   `invert-x` / `invert-y`).
 
 ## Câblage (overlay `boards/rp2040_zero.overlay`)
 
@@ -63,7 +60,7 @@ Reprend le `spi0_default` de la carte :
 | SCLK | GP6 | SPI0 SCK |
 | SDIO | GP3 **+** GP4 pontés | SPI0 MOSI + MISO (half-duplex) |
 | NCS | GP5 | Chip select (GPIO) |
-| MOTION | GP7 | Interruption (actif bas, pull-up) |
+| MOTION | GP7 | Interruption (`motion-gpios`, actif bas, pull-up) |
 | VDD / GND | 3V3 / GND | Alimentation |
 
 ## Arborescence
@@ -71,14 +68,10 @@ Reprend le `spi0_default` de la carte :
 ```
 software/
 ├── CMakeLists.txt
-├── prj.conf                     # Kconfig : SPI, INPUT, USB device_next (HID+CDC)
-├── west.yml                     # manifeste : Zephyr v4.4.0 (driver natif)
+├── prj.conf                     # Kconfig : SPI, INPUT_PMW3610, USB device_next (HID+CDC)
+├── west.yml                     # manifeste : Zephyr v4.4.0
 ├── boards/
 │   └── rp2040_zero.overlay      # câblage capteur + noeud HID + console CDC
-├── dts/bindings/input/
-│   └── pixart,pmw3610.yaml      # binding du driver natif
-├── drivers/
-│   └── pmw3610.c                # driver Zephyr natif du capteur
 └── src/
     ├── main.c                   # input → rapports souris HID
     ├── usb.c                    # contexte USB device_next (HID + CDC-ACM)
@@ -112,7 +105,7 @@ Le build est **bloquant** : tout push qui casserait la compilation fera échouer
 
 ## Références
 
-- [PMW3610 — breakout siderakb/pmw3610-pcb](https://github.com/siderakb/pmw3610-pcb)
+- [Driver PMW3610 — Zephyr `drivers/input`](https://github.com/zephyrproject-rtos/zephyr/blob/v4.4.0/drivers/input/input_pmw3610.c)
 - [Carte RP2040-Zero — documentation Zephyr](https://docs.zephyrproject.org/latest/boards/waveshare/rp2040_zero/doc/index.html)
 - [Sample HID souris (device_next) — Zephyr](https://github.com/zephyrproject-rtos/zephyr/tree/v4.4.0/samples/subsys/usb/hid-mouse)
-- [Sous-système input — documentation Zephyr](https://docs.zephyrproject.org/latest/services/input/index.html)
+- [Breakout PMW3610 — siderakb/pmw3610-pcb](https://github.com/siderakb/pmw3610-pcb)
