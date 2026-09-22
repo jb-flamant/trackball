@@ -1,0 +1,53 @@
+/*
+ * Overlay carte : RP2040-Zero + PMW3610
+ * -------------------------------------
+ * Reprend le pinctrl `spi0_default` fourni par la carte (rp2040_zero-pinctrl.dtsi) :
+ *     SCK          = GP6   (SPI0_SCK_P6)
+ *     MOSI (TX)    = GP3   (SPI0_TX_P3)
+ *     MISO (RX)    = GP4   (SPI0_RX_P4)
+ *
+ * Le PMW3610 est un capteur SPI 3 fils HALF-DUPLEX : il n'a qu'une seule broche de
+ * donnees bidirectionnelle (SDIO). Sur le RP2040 (SPI full-duplex), on relie donc
+ * GP3 (MOSI) et GP4 (MISO) ENSEMBLE, cote carte, vers la broche SDIO du capteur.
+ * En lecture, le driver met la ligne en haute impedance cote MCU.
+ *
+ * Lignes de controle (GPIO) choisies sur des broches libres du RP2040-Zero :
+ *     NCS    = GP5   (chip select, actif bas)
+ *     MOTION = GP7   (interruption capteur, actif bas, pull-up)
+ *
+ * Console de debug redirigee sur l'USB CDC-ACM (pas d'UART cablee en facade).
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+&spi0 {
+	status = "okay";
+	cs-gpios = <&gpio0 5 GPIO_ACTIVE_LOW>;
+
+	pmw3610: pmw3610@0 {
+		compatible = "pixart,pmw3610-alt";
+		reg = <0>;
+		spi-max-frequency = <2000000>;   /* PMW3610 : SCLK <= 2 MHz */
+		irq-gpios = <&gpio0 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		cpi = <800>;                     /* resolution ; a ajuster */
+		/* Orientation (a regler une fois la carte montee) :
+		 * swap-xy;
+		 * invert-x;
+		 * invert-y;
+		 */
+	};
+};
+
+/* Console sur USB CDC-ACM */
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+		zephyr,shell-uart = &cdc_acm_uart0;
+	};
+};
