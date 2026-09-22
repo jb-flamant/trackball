@@ -29,10 +29,12 @@ Vérifiée avant d'écrire le code :
 
 ### Points à valider sur matériel
 
-1. **Couplage ZMK du driver.** Le module tire des symboles Kconfig ZMK (ex.
-   `CONFIG_ZMK_POINTING`). Pour cette application Zephyr *pure*, il faut soit fournir
-   un shim de ces symboles, soit utiliser un fork « dé-ZMKifié ». C'est le principal
-   risque d'intégration ; à traiter au premier `west build`.
+1. **Couplage ZMK du driver.** Le driver inclut `<zmk/keymap.h>` et
+   `<zmk/events/activity_state_changed.h>` et enregistre un écouteur d'activité ZMK
+   (endormissement automatique). Inexistants hors ZMK, ces symboles sont fournis par
+   un **shim minimal** (`zmk_shim/`, ajouté au chemin d'include dans `CMakeLists.txt`)
+   qui les réduit à des no-op : le capteur ne s'endort plus tout seul, sans effet sur
+   la lecture. Alternative plus propre à terme : un fork « dé-ZMKifié » du driver.
 2. **SPI half-duplex.** Le pont MOSI↔MISO sur la broche SDIO doit être fait côté
    carte. Alternative plus propre sur RP2040 : implémenter le SPI en **PIO**.
 3. **VID/PID.** `src/usb.c` utilise une paire de TEST (`0x1209/0x0001`, pid.codes) —
