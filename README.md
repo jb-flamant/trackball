@@ -29,7 +29,7 @@ exactes), puis transposées à la bille Ø34.
 | Dossier | Contenu |
 | --- | --- |
 | `hardware/` | Modèle 3D et documentation associée. |
-| `software/` | Firmware (Zephyr / RP2040) — à venir. |
+| `software/` | Firmware Zephyr : souris HID USB (capteur PMW3610 + boutons). Voir [`software/README.md`](software/README.md). |
 
 ### `hardware/`
 
@@ -38,6 +38,49 @@ exactes), puis transposées à la bille Ø34.
 | `trackball.scad` | Modèle paramétrique (OpenSCAD 2021.01). |
 | `index.html` | Page de documentation (cotes, coupes, vues, reste à faire). |
 | `*.png` | Rendus référencés par la page HTML. |
+
+## Câblage électronique
+
+Capteur **PMW3610** sur le SPI0 du RP2040-Zero, plus quatre boutons. Le PMW3610
+étant un SPI **3 fils half-duplex** (une seule broche de données `SDIO`), on relie
+**GP3 (MOSI) et GP4 (MISO) ensemble** vers `SDIO`.
+
+```
+        RP2040-Zero                        PMW3610 (breakout)
+      +-------------+                     +------------------+
+      |        GP6  |------- SCLK --------| SCLK             |
+      |        GP3  |--+                  |                  |
+      |        GP4  |--+---- SDIO --------| SDIO  (GP3+GP4   |
+      |             |                     |        pontes)   |
+      |        GP5  |------- NCS  --------| NCS              |
+      |        GP7  |------- MOTION ------| MOTION           |
+      |        3V3  |------- VDD  --------| VDD              |
+      |        GND  |------- GND  --------| GND              |
+      +-------------+                     +------------------+
+
+  Boutons — actif bas, pull-up interne (non cables = relaches, aucun clic parasite) :
+
+      GP8  --[ /]-- GND     Gauche
+      GP9  --[ /]-- GND     Droit
+      GP10 --[ /]-- GND     Milieu
+      GP11 --[ /]-- GND     Scroll  (bascule le mode molette)
+```
+
+| Signal | Broche RP2040-Zero | Fonction |
+| --- | --- | --- |
+| SCLK | GP6 | Horloge SPI0 |
+| SDIO | GP3 **+** GP4 (pontés) | Données SPI0 (MOSI+MISO, half-duplex) |
+| NCS | GP5 | Chip select (actif bas) |
+| MOTION | GP7 | Interruption capteur (actif bas, pull-up) |
+| Bouton gauche | GP8 | Clic gauche |
+| Bouton droit | GP9 | Clic droit |
+| Bouton milieu | GP10 | Clic milieu |
+| Bouton scroll | GP11 | Bascule mode molette (non transmis à l'hôte) |
+| VDD / GND | 3V3 / GND | Alimentation |
+
+Le trackball fonctionne **sans aucun bouton câblé** (souris qui se déplace, sans
+clic) : les entrées ont un pull-up interne, une broche non connectée est donc lue
+au niveau « relâché ». L'alimentation vient du connecteur **USB-C** du RP2040-Zero.
 
 ## Utilisation
 

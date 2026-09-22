@@ -40,6 +40,35 @@
 	};
 };
 
+/*
+ * Boutons de la souris (gpio-keys). Actifs bas avec pull-up interne : une entree
+ * non connectee est lue au niveau inactif (bouton relache) -> aucun clic fantome
+ * si le poussoir n'est pas cable. Broches libres du RP2040-Zero.
+ */
+/ {
+	buttons {
+		compatible = "gpio-keys";
+
+		btn_left: button_left {
+			gpios = <&gpio0 8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_BTN_LEFT>;
+		};
+		btn_right: button_right {
+			gpios = <&gpio0 9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_BTN_RIGHT>;
+		};
+		btn_middle: button_middle {
+			gpios = <&gpio0 10 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_BTN_MIDDLE>;
+		};
+		/* Bouton de bascule du mode molette (non transmis a l'hote). */
+		btn_scroll: button_scroll {
+			gpios = <&gpio0 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_KEY_SCROLLLOCK>;
+		};
+	};
+};
+
 /* Souris HID (nouveau stack USB device_next) */
 / {
 	hid_dev_0: hid_dev_0 {

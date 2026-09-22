@@ -58,13 +58,23 @@ Le driver expose aussi des API runtime (`pmw3610_set_resolution()`,
 
 Reprend le `spi0_default` de la carte :
 
-| Signal PMW3610 | RP2040-Zero | Fonction |
+| Signal | RP2040-Zero | Fonction |
 | --- | --- | --- |
 | SCLK | GP6 | SPI0 SCK |
 | SDIO | GP3 **+** GP4 pontés | SPI0 MOSI + MISO (half-duplex) |
 | NCS | GP5 | Chip select (GPIO) |
 | MOTION | GP7 | Interruption (`motion-gpios`, actif bas, pull-up) |
+| Bouton gauche | GP8 | `INPUT_BTN_LEFT` |
+| Bouton droit | GP9 | `INPUT_BTN_RIGHT` |
+| Bouton milieu | GP10 | `INPUT_BTN_MIDDLE` |
+| Bouton scroll | GP11 | Bascule mode molette (interne, non transmis) |
 | VDD / GND | 3V3 / GND | Alimentation |
+
+Boutons via `gpio-keys`, actifs bas avec pull-up interne : une entrée non câblée
+est lue « relâchée » (pas de clic parasite). Le bouton **scroll** est en logique
+**bascule** (toggle) : une pression active/désactive le mode molette, dans lequel
+l'axe Y du capteur alimente la molette (`SCROLL_DIV` counts par cran). Le scroll
+n'opère qu'en mode report (la molette est absente du rapport boot).
 
 ## Arborescence
 

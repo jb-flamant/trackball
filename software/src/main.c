@@ -1,11 +1,11 @@
 /*
  * Trackball RP2040-Zero + PMW3610 — souris HID USB (Zephyr, stack device_next)
  *
- * Le driver PMW3610 (module hors-arbre) publie le deplacement de la bille dans le
- * sous-systeme `input` sous forme d'evenements relatifs INPUT_REL_X / INPUT_REL_Y.
- * On les convertit en rapports de souris HID (boutons, X, Y, molette) transmis a
- * l'hote par l'USB. Un lot d'evenements est clos par le drapeau `sync`, ce qui
- * permet de regrouper X et Y dans un meme rapport.
+ * Le driver PMW3610 publie le deplacement de la bille dans le sous-systeme `input`
+ * (INPUT_REL_X / INPUT_REL_Y) et les boutons (gpio-keys) publient INPUT_BTN_*. On
+ * fusionne le tout en rapports de souris HID (boutons, X, Y, molette) transmis a
+ * l'hote par l'USB. Un bouton dedie bascule un mode molette (toggle) : l'axe Y du
+ * capteur alimente alors la molette au lieu du deplacement vertical.
  */
 
 #include "usb.h"
@@ -45,6 +45,14 @@ static bool mouse_ready;
 static volatile uint8_t hid_protocol = HID_PROTOCOL_REPORT;
 #define MOUSE_BOOT_REPORT_COUNT 3
 
+/* Nombre de counts capteur par cran de molette en mode scroll. */
+#define SCROLL_DIV 20
+
+/* Etat persistant : boutons pressés (bits) et mode molette (bascule). */
+static uint8_t mouse_buttons;
+static bool scroll_mode;
+static int32_t scroll_accum;
+
 /* Borne un delta au domaine signe 8 bits du rapport HID. */
 static inline uint8_t clamp_delta(int32_t v)
 {
@@ -56,7 +64,9 @@ static inline uint8_t clamp_delta(int32_t v)
 	return (uint8_t)(int8_t)v;
 }
 
-/* Callback du sous-systeme input : accumule X/Y puis emet a la cloture (sync). */
+/* Callback du sous-systeme input : recoit les evenements du capteur ET des
+ * boutons (gpio-keys), les fusionne dans un rapport souris emis a la cloture
+ * du lot (drapeau sync). */
 static void input_cb(struct input_event *evt, void *user_data)
 {
 	static uint8_t report[MOUSE_REPORT_COUNT];
@@ -64,26 +74,60 @@ static void input_cb(struct input_event *evt, void *user_data)
 	ARG_UNUSED(user_data);
 
 	switch (evt->code) {
+	case INPUT_BTN_LEFT:
+		WRITE_BIT(mouse_buttons, 0, evt->value);
+		break;
+	case INPUT_BTN_RIGHT:
+		WRITE_BIT(mouse_buttons, 1, evt->value);
+		break;
+	case INPUT_BTN_MIDDLE:
+		WRITE_BIT(mouse_buttons, 2, evt->value);
+		break;
+	case INPUT_KEY_SCROLLLOCK:
+		/* Bascule le mode molette sur l'appui ; non transmis a l'hote. */
+		if (evt->value) {
+			scroll_mode = !scroll_mode;
+			scroll_accum = 0;
+			LOG_INF("Mode molette : %s", scroll_mode ? "actif" : "inactif");
+		}
+		return;
 	case INPUT_REL_X:
-		report[MOUSE_X_REPORT_IDX] = clamp_delta(evt->value);
+		/* En mode molette, l'axe X est ignore (pan horizontal non gere). */
+		if (!scroll_mode) {
+			report[MOUSE_X_REPORT_IDX] = clamp_delta(evt->value);
+		}
 		break;
 	case INPUT_REL_Y:
-		report[MOUSE_Y_REPORT_IDX] = clamp_delta(evt->value);
+		if (scroll_mode) {
+			/* Accumulation puis conversion en crans de molette. */
+			scroll_accum += evt->value;
+			int32_t ticks = scroll_accum / SCROLL_DIV;
+
+			if (ticks != 0) {
+				scroll_accum -= ticks * SCROLL_DIV;
+				report[MOUSE_WHEEL_REPORT_IDX] = clamp_delta(-ticks);
+			}
+		} else {
+			report[MOUSE_Y_REPORT_IDX] = clamp_delta(evt->value);
+		}
 		break;
 	default:
 		return;
 	}
+
+	report[MOUSE_BTN_REPORT_IDX] = mouse_buttons;
 
 	if (!evt->sync) {
 		return;   /* lot incomplet : on attend le dernier evenement */
 	}
 
 	if (k_msgq_put(&mouse_msgq, report, K_NO_WAIT) != 0) {
-		LOG_WRN("File de rapports pleine, mouvement perdu");
+		LOG_WRN("File de rapports pleine, evenement perdu");
 	}
 
 	report[MOUSE_X_REPORT_IDX] = 0U;
 	report[MOUSE_Y_REPORT_IDX] = 0U;
+	report[MOUSE_WHEEL_REPORT_IDX] = 0U;
 }
 INPUT_CALLBACK_DEFINE(NULL, input_cb, NULL);
 
