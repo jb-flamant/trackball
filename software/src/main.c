@@ -167,22 +167,20 @@ int main(void)
 	struct usbd_context *usbd;
 	int ret;
 
+	/* IMPORTANT : l'enumeration USB (souris + console serie) NE DOIT PAS
+	 * dependre du capteur. Si le PMW3610 n'est pas cable/repond pas, son init
+	 * echoue et device_is_ready(sensor) est faux : on continue quand meme pour
+	 * que la carte enumere et que la console reste accessible pour diagnostiquer. */
+
 	hid_dev = DEVICE_DT_GET_ONE(zephyr_hid_device);
-	if (!device_is_ready(hid_dev)) {
+	if (device_is_ready(hid_dev)) {
+		ret = hid_device_register(hid_dev, hid_report_desc,
+					  sizeof(hid_report_desc), &mouse_ops);
+		if (ret != 0) {
+			LOG_ERR("Enregistrement du peripherique HID (%d)", ret);
+		}
+	} else {
 		LOG_ERR("Peripherique HID non pret");
-		return -EIO;
-	}
-
-	if (!device_is_ready(sensor)) {
-		LOG_ERR("Capteur PMW3610 non pret");
-		return -ENODEV;
-	}
-
-	ret = hid_device_register(hid_dev, hid_report_desc,
-				  sizeof(hid_report_desc), &mouse_ops);
-	if (ret != 0) {
-		LOG_ERR("Enregistrement du peripherique HID (%d)", ret);
-		return ret;
 	}
 
 	usbd = app_usbd_init();
@@ -197,7 +195,14 @@ int main(void)
 		return ret;
 	}
 
-	LOG_INF("Trackball pret : souris HID USB active");
+	LOG_INF("USB actif : souris HID + console CDC");
+
+	if (device_is_ready(sensor)) {
+		LOG_INF("Capteur PMW3610 pret");
+	} else {
+		LOG_WRN("Capteur PMW3610 NON pret : souris sans mouvement "
+			"(verifier cablage SPI / pont MOSI-MISO)");
+	}
 
 	while (true) {
 		UDC_STATIC_BUF_DEFINE(report, MOUSE_REPORT_COUNT);
