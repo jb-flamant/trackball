@@ -96,9 +96,8 @@ Une fois flashé, la carte énumère comme souris USB *et* comme port série vir
 Le workflow `.github/workflows/build.yml` compile le firmware pour `rp2040_zero`
 sur un runner GitHub (action officielle `zephyrproject-rtos/action-zephyr-setup`,
 toolchain `arm-zephyr-eabi`) et publie les artefacts `zephyr.uf2` / `zephyr.elf`.
-L'étape de build est pour l'instant **non bloquante** (`continue-on-error`) : elle
-sert à exercer le couplage ZMK du driver ; retirer ce drapeau une fois le point
-résolu pour rendre la CI bloquante.
+Le build est **bloquant** : le firmware compile (shim ZMK en place), tout push qui
+casserait la compilation fera échouer la CI.
 
 ## Références
 

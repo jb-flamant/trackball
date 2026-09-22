@@ -37,15 +37,10 @@ jobs:
 
       - name: Build (rp2040_zero)
         id: build
-        # NON BLOQUANT pour l'instant : tant que le couplage ZMK du driver
-        # PMW3610 n'est pas traite (voir software/README.md), ce build peut
-        # echouer. Le journal reste consultable. Retirer `continue-on-error`
-        # une fois le probleme resolu pour rendre la CI bloquante.
-        continue-on-error: true
         run: west build -p always -b rp2040_zero software
 
       - name: Upload firmware artifacts
-        if: steps.build.outcome == 'success'
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: trackball-rp2040_zero
