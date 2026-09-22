@@ -1,11 +1,9 @@
 # Manifest west de l'application (topologie T2 : l'application est le dépôt manifeste).
-# `west update` récupère Zephyr et le module hors-arbre du PMW3610.
+# `west update` récupère Zephyr (le driver PMW3610 est natif à l'application).
 manifest:
   remotes:
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
-    - name: badjeff
-      url-base: https://github.com/badjeff
 
   projects:
     # Zephyr + ses modules (HAL RP2040, etc.) tirés via import.
@@ -15,13 +13,8 @@ manifest:
       revision: v4.4.0
       import: true
 
-    # Driver PMW3610 hors-arbre (écosystème ZMK, compatible Zephyr >= 3.5).
-    # Figé sur un commit précis pour la reproductibilité (voir README pour les
-    # dépendances Kconfig ZMK à traiter dans une application Zephyr pure).
-    - name: zmk-pmw3610-driver
-      remote: badjeff
-      revision: 44b4a76b74d293a93cec4ccb7e04cb8d29c10f93
-      path: modules/pmw3610
+    # Le driver PMW3610 est désormais natif (software/drivers/pmw3610.c) :
+    # plus aucun module hors-arbre ni dépendance ZMK.
 
   self:
     # Doit correspondre au nom du dossier de l'application dans l'espace de

@@ -1,0 +1,39 @@
+# Copyright (c) 2026
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  PixArt PMW3610 low-power optical mouse/trackball sensor.
+
+  Le capteur communique en SPI 3 fils (une broche de données SDIO
+  bidirectionnelle) : sur un contrôleur SPI full-duplex, relier MOSI et MISO
+  ensemble vers SDIO. Le driver publie le déplacement dans le sous-système
+  input sous forme d'évènements INPUT_REL_X / INPUT_REL_Y.
+
+compatible: "pixart,pmw3610"
+
+include: spi-device.yaml
+
+properties:
+  irq-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      Ligne d'interruption MOTION du capteur (active à l'état bas).
+
+  cpi:
+    type: int
+    default: 800
+    description: |
+      Résolution en counts par pouce. Plage 200 à 3200, pas de 200.
+
+  swap-xy:
+    type: boolean
+    description: Échange les axes X et Y.
+
+  invert-x:
+    type: boolean
+    description: Inverse le signe de l'axe X.
+
+  invert-y:
+    type: boolean
+    description: Inverse le signe de l'axe Y.
