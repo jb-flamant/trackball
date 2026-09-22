@@ -15,6 +15,7 @@
 #include <zephyr/input/input.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/usb/usbd.h>
+#include <zephyr/usb/class/hid.h>
 #include <zephyr/usb/class/usbd_hid.h>
 #include <zephyr/logging/log.h>
 
@@ -36,6 +37,13 @@ K_MSGQ_DEFINE(mouse_msgq, MOUSE_REPORT_COUNT, 8, 1);
 
 static const struct device *hid_dev;
 static bool mouse_ready;
+
+/* Protocole HID courant (piloté par l'hôte via SET_PROTOCOL).
+ * En mode boot (BIOS/UEFI), le rapport souris est figé à 3 octets
+ * (boutons, X, Y) ; en mode report, on émet aussi la molette (4 octets).
+ * Les 3 premiers octets de notre rapport correspondent déjà au format boot. */
+static volatile uint8_t hid_protocol = HID_PROTOCOL_REPORT;
+#define MOUSE_BOOT_REPORT_COUNT 3
 
 /* Borne un delta au domaine signe 8 bits du rapport HID. */
 static inline uint8_t clamp_delta(int32_t v)
@@ -96,9 +104,17 @@ static int mouse_get_report(const struct device *dev, const uint8_t type,
 	return 0;
 }
 
+static void mouse_set_protocol(const struct device *dev, const uint8_t proto)
+{
+	ARG_UNUSED(dev);
+	hid_protocol = proto;
+	LOG_INF("Protocole HID : %s", proto == HID_PROTOCOL_BOOT ? "boot" : "report");
+}
+
 static struct hid_device_ops mouse_ops = {
 	.iface_ready = mouse_iface_ready,
 	.get_report = mouse_get_report,
+	.set_protocol = mouse_set_protocol,
 };
 
 int main(void)
@@ -148,7 +164,12 @@ int main(void)
 			continue;   /* hote non connecte : on ignore le mouvement */
 		}
 
-		ret = hid_device_submit_report(hid_dev, MOUSE_REPORT_COUNT, report);
+		/* Mode boot : rapport de 3 octets (boutons, X, Y) sans molette. */
+		const uint8_t len = (hid_protocol == HID_PROTOCOL_BOOT)
+					    ? MOUSE_BOOT_REPORT_COUNT
+					    : MOUSE_REPORT_COUNT;
+
+		ret = hid_device_submit_report(hid_dev, len, report);
 		if (ret != 0) {
 			LOG_ERR("Envoi du rapport HID (%d)", ret);
 		}

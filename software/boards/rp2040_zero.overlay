@@ -45,7 +45,7 @@
 	hid_dev_0: hid_dev_0 {
 		compatible = "zephyr,hid-device";
 		label = "HID0";
-		protocol-code = "none";
+		protocol-code = "mouse";         /* souris boot-capable (BIOS/UEFI) */
 		in-polling-period-us = <1000>;   /* 1 kHz */
 		in-report-size = <8>;
 	};

@@ -4,8 +4,11 @@ Firmware Zephyr transformant le capteur optique **PMW3610** en **souris HID USB*
 sur **RP2040-Zero**. Le capteur est piloté par le **driver PMW3610 fourni en amont
 par Zephyr** (`drivers/input`), qui publie le déplacement de la bille dans le
 sous-système `input` (`INPUT_REL_X` / `INPUT_REL_Y`) ; l'application convertit ces
-évènements en rapports de souris HID transmis à l'hôte par l'USB. Une console de
-debug est exposée en parallèle sur une CDC-ACM (périphérique USB composite).
+évènements en rapports de souris HID transmis à l'hôte par l'USB. L'interface est
+annoncée comme **souris boot-capable** (`protocol-code = "mouse"`) : elle fonctionne
+donc aussi avant l'OS (BIOS/UEFI), le firmware émettant un rapport de 3 octets en
+mode boot et de 4 octets (avec molette) en mode report. Une console de debug est
+exposée en parallèle sur une CDC-ACM (périphérique USB composite).
 
 Aucune dépendance à ZMK ni à un module hors-arbre : tout est du **Zephyr pur**, et
 le driver du capteur est **in-tree** (maintenu par le projet Zephyr).
