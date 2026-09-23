@@ -6,10 +6,14 @@
  *     MOSI (TX)    = GP3   (SPI0_TX_P3)
  *     MISO (RX)    = GP4   (SPI0_RX_P4)
  *
- * Le PMW3610 est un capteur SPI 3 fils HALF-DUPLEX : il n'a qu'une seule broche de
- * donnees bidirectionnelle (SDIO). Sur le RP2040 (SPI full-duplex), on relie donc
- * GP3 (MOSI) et GP4 (MISO) ENSEMBLE, cote carte, vers la broche SDIO du capteur.
- * En lecture, le driver met la ligne en haute impedance cote MCU.
+ * Le PMW3610 est un capteur SPI 3 fils HALF-DUPLEX (une seule broche de donnees
+ * bidirectionnelle SDIO). Le SPI du RP2040 est MATERIEL et pilote MOSI en
+ * permanence (push-pull) : relier GP3 (MOSI) directement a SDIO cree une
+ * contention de bus en lecture (product id lu = 0x00/0xFF -> self-test KO).
+ * Cablage correct :
+ *   - GP4 (MISO) directement sur SDIO ;
+ *   - GP3 (MOSI) sur SDIO via une resistance serie ~1k (le capteur l'emporte
+ *     en lecture, MOSI ecrit a travers la resistance).
  *
  * Lignes de controle (GPIO) choisies sur des broches libres du RP2040-Zero :
  *     NCS    = GP5   (chip select, actif bas)

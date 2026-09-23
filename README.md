@@ -42,16 +42,18 @@ exactes), puis transposées à la bille Ø34.
 ## Câblage électronique
 
 Capteur **PMW3610** sur le SPI0 du RP2040-Zero, plus quatre boutons. Le PMW3610
-étant un SPI **3 fils half-duplex** (une seule broche de données `SDIO`), on relie
-**GP3 (MOSI) et GP4 (MISO) ensemble** vers `SDIO`.
+étant un SPI **3 fils half-duplex** (une seule broche de données `SDIO`) et le SPI
+du RP2040 étant matériel (MOSI toujours piloté), il faut **GP4 (MISO) en prise
+directe sur `SDIO` et GP3 (MOSI) relié à `SDIO` via une résistance série ~1 kΩ**.
+Un pont direct GP3–GP4 provoque une contention de bus en lecture (self-test KO).
 
 ```
         RP2040-Zero                        PMW3610 (breakout)
       +-------------+                     +------------------+
       |        GP6  |------- SCLK --------| SCLK             |
-      |        GP3  |--+                  |                  |
-      |        GP4  |--+---- SDIO --------| SDIO  (GP3+GP4   |
-      |             |                     |        pontes)   |
+      |        GP4  |----------+--------- | SDIO  (MISO      |
+      |        GP3  |--[~1k]---+          |        direct,   |
+      |             |                     |        MOSI 1k)  |
       |        GP5  |------- NCS  --------| NCS              |
       |        GP7  |------- MOTION ------| MOTION           |
       |        3V3  |------- VDD  --------| VDD              |
@@ -69,7 +71,7 @@ Capteur **PMW3610** sur le SPI0 du RP2040-Zero, plus quatre boutons. Le PMW3610
 | Signal | Broche RP2040-Zero | Fonction |
 | --- | --- | --- |
 | SCLK | GP6 | Horloge SPI0 |
-| SDIO | GP3 **+** GP4 (pontés) | Données SPI0 (MOSI+MISO, half-duplex) |
+| SDIO | GP4 direct **+** GP3 via ~1kΩ | Données SPI0 : MISO direct, MOSI en série (half-duplex) |
 | NCS | GP5 | Chip select (actif bas) |
 | MOTION | GP7 | Interruption capteur (actif bas, pull-up) |
 | Bouton gauche | GP8 | Clic gauche |

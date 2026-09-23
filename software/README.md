@@ -61,7 +61,7 @@ Reprend le `spi0_default` de la carte :
 | Signal | RP2040-Zero | Fonction |
 | --- | --- | --- |
 | SCLK | GP6 | SPI0 SCK |
-| SDIO | GP3 **+** GP4 pontés | SPI0 MOSI + MISO (half-duplex) |
+| SDIO | GP4 direct **+** GP3 via ~1kΩ | SPI0 MISO direct, MOSI en série (half-duplex) |
 | NCS | GP5 | Chip select (GPIO) |
 | MOTION | GP7 | Interruption (`motion-gpios`, actif bas, pull-up) |
 | Bouton gauche | GP8 | `INPUT_BTN_LEFT` |
