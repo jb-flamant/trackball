@@ -21,8 +21,10 @@
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
-/* Descripteur de rapport : souris a 2 boutons + X/Y/molette relatifs. */
-static const uint8_t hid_report_desc[] = HID_MOUSE_REPORT_DESC(2);
+/* Descripteur de rapport : souris a 3 boutons (gauche/droit/milieu) + X/Y/molette
+ * relatifs. L'argument de la macro est le NOMBRE de boutons declares : il doit
+ * valoir 3 pour que le bouton milieu (bit 2) soit vu par l'hote. */
+static const uint8_t hid_report_desc[] = HID_MOUSE_REPORT_DESC(3);
 
 enum mouse_report_idx {
 	MOUSE_BTN_REPORT_IDX = 0,
