@@ -18,6 +18,7 @@
  * Lignes de controle (GPIO) choisies sur des broches libres du RP2040-Zero :
  *     NCS    = GP5   (chip select, actif bas)
  *     MOTION = GP7   (interruption capteur, actif bas, pull-up)
+ *     NRESET = GP2   (reset capteur, actif bas ; sequence geree par le driver)
  */
 
 #include <zephyr/dt-bindings/gpio/gpio.h>
@@ -33,6 +34,7 @@
 		reg = <0>;
 		spi-max-frequency = <2000000>;   /* PMW3610 : SCLK <= 2 MHz */
 		motion-gpios = <&gpio0 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		reset-gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;  /* NRESET, actif bas */
 		res-cpi = <800>;                 /* resolution ; a ajuster */
 		zephyr,axis-x = <INPUT_REL_X>;
 		zephyr,axis-y = <INPUT_REL_Y>;

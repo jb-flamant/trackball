@@ -56,6 +56,7 @@ Un pont direct GP3–GP4 provoque une contention de bus en lecture (self-test KO
       |             |                     |        MOSI 1k)  |
       |        GP5  |------- NCS  --------| NCS              |
       |        GP7  |------- MOTION ------| MOTION           |
+      |        GP2  |------- NRESET ------| NRESET           |
       |        3V3  |------- VDD  --------| VDD              |
       |        GND  |------- GND  --------| GND              |
       +-------------+                     +------------------+
@@ -74,6 +75,7 @@ Un pont direct GP3–GP4 provoque une contention de bus en lecture (self-test KO
 | SDIO | GP4 direct **+** GP3 via ~1kΩ | Données SPI0 : MISO direct, MOSI en série (half-duplex) |
 | NCS | GP5 | Chip select (actif bas) |
 | MOTION | GP7 | Interruption capteur (actif bas, pull-up) |
+| NRESET | GP2 | Reset capteur (actif bas, piloté par le driver) |
 | Bouton gauche | GP8 | Clic gauche |
 | Bouton droit | GP9 | Clic droit |
 | Bouton milieu | GP10 | Clic milieu |

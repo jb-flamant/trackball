@@ -64,6 +64,7 @@ Reprend le `spi0_default` de la carte :
 | SDIO | GP4 direct **+** GP3 via ~1kΩ | SPI0 MISO direct, MOSI en série (half-duplex) |
 | NCS | GP5 | Chip select (GPIO) |
 | MOTION | GP7 | Interruption (`motion-gpios`, actif bas, pull-up) |
+| NRESET | GP2 | Reset capteur (`reset-gpios`, actif bas) |
 | Bouton gauche | GP8 | `INPUT_BTN_LEFT` |
 | Bouton droit | GP9 | `INPUT_BTN_RIGHT` |
 | Bouton milieu | GP10 | `INPUT_BTN_MIDDLE` |
