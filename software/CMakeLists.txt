@@ -6,4 +6,5 @@ project(trackball_fw C)
 target_sources(app PRIVATE
 	src/main.c
 	src/usb.c
+	src/i2c_target.c
 )
