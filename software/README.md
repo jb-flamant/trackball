@@ -69,6 +69,8 @@ Reprend le `spi0_default` de la carte :
 | Bouton droit | GP9 | `INPUT_BTN_RIGHT` |
 | Bouton milieu | GP10 | `INPUT_BTN_MIDDLE` |
 | Bouton scroll | GP11 | Bascule mode molette (interne, non transmis) |
+| I2C SDA | GP28 | Sortie I2C target (`i2c0`) |
+| I2C SCL | GP29 | Sortie I2C target (`i2c0`) |
 | VDD / GND | 3V3 / GND | Alimentation |
 
 Boutons via `gpio-keys`, actifs bas avec pull-up interne : une entrée non câblée
@@ -77,19 +79,47 @@ est lue « relâchée » (pas de clic parasite). Le bouton **scroll** est en log
 l'axe Y du capteur alimente la molette (`SCROLL_DIV` counts par cran). Le scroll
 n'opère qu'en mode report (la molette est absente du rapport boot).
 
+## Sortie I2C target
+
+En plus de la souris USB, le trackball s'enregistre comme **périphérique I2C target**
+(`CONFIG_I2C_TARGET`, driver DesignWare du RP2040) sur `i2c0` — **GP28 (SDA) / GP29
+(SCL)** — pour servir de module lu par un contrôleur hôte. Pull-ups externes requis
+(~4,7 kΩ vers 3V3), généralement côté hôte. Adresse **0x54** (modifiable dans
+`src/i2c_target.c`).
+
+Carte de registres (l'hôte écrit l'index de départ, puis lit N octets avec
+auto-incrément) :
+
+| Reg | Nom | Contenu |
+| --- | --- | --- |
+| 0x00 | WHO_AM_I | `0x3C` |
+| 0x01 | BUTTONS | bit0 gauche, bit1 droit, bit2 milieu (niveau) |
+| 0x02 | DX | delta X (int8), **remis à zéro à la lecture** |
+| 0x03 | DY | delta Y (int8), **remis à zéro à la lecture** |
+
+Les deltas sont bornés à ±127 et le reliquat conservé (aucune perte si le mouvement
+dépasse 127 entre deux lectures). Le mouvement exposé est **brut** (indépendant du
+mode molette USB). Les callbacks target s'exécutent en contexte ISR ; l'accumulation
+côté `input` est protégée par `irq_lock()`.
+
+> ⚠️ Adresse et carte de registres = **contrat avec l'hôte** : à adapter si le
+> contrôleur attend un protocole précis. Non encore testé sur cible.
+
 ## Arborescence
 
 ```
 software/
 ├── CMakeLists.txt
-├── prj.conf                     # Kconfig : SPI, INPUT_PMW3610, USB device_next (HID+CDC)
+├── prj.conf                     # Kconfig : SPI, INPUT_PMW3610, USB device_next, I2C target
 ├── west.yml                     # manifeste : Zephyr v4.4.0
 ├── boards/
-│   └── rp2040_zero.overlay      # câblage capteur + noeud HID + console CDC
+│   └── rp2040_zero.overlay      # câblage capteur + HID + console CDC + I2C0
 └── src/
-    ├── main.c                   # input → rapports souris HID
+    ├── main.c                   # input → rapports souris HID + feed I2C
     ├── usb.c                    # contexte USB device_next (HID + CDC-ACM)
-    └── usb.h
+    ├── usb.h
+    ├── i2c_target.c             # sortie I2C target (carte de registres)
+    └── i2c_target.h
 ```
 
 ## Compilation
