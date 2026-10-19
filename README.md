@@ -67,6 +67,12 @@ Un pont direct GP3–GP4 provoque une contention de bus en lecture (self-test KO
       GP9  --[ /]-- GND     Droit
       GP10 --[ /]-- GND     Milieu
       GP11 --[ /]-- GND     Scroll  (bascule le mode molette)
+
+  Sortie I2C target (optionnelle) — pull-ups ~4.7k vers 3V3, en general cote hote :
+
+      GP28 ---- SDA ----\
+                         }--- controleur hote I2C
+      GP29 ---- SCL ----/
 ```
 
 | Signal | Broche RP2040-Zero | Fonction |
@@ -80,11 +86,67 @@ Un pont direct GP3–GP4 provoque une contention de bus en lecture (self-test KO
 | Bouton droit | GP9 | Clic droit |
 | Bouton milieu | GP10 | Clic milieu |
 | Bouton scroll | GP11 | Bascule mode molette (non transmis à l'hôte) |
+| I2C SDA | GP28 | Sortie I2C target (vers contrôleur hôte) |
+| I2C SCL | GP29 | Sortie I2C target (vers contrôleur hôte) |
 | VDD / GND | 3V3 / GND | Alimentation |
 
 Le trackball fonctionne **sans aucun bouton câblé** (souris qui se déplace, sans
 clic) : les entrées ont un pull-up interne, une broche non connectée est donc lue
 au niveau « relâché ». L'alimentation vient du connecteur **USB-C** du RP2040-Zero.
+
+### Sortie I2C target (optionnelle)
+
+En plus de la souris USB, le trackball peut être lu par un **contrôleur hôte** via
+I2C (mode target, adresse **0x54** par défaut). Carte de registres (auto-incrément) :
+
+| Reg | Nom | Contenu |
+| --- | --- | --- |
+| 0x00 | WHO_AM_I | `0x3C` (identification) |
+| 0x01 | BUTTONS | bit0 gauche, bit1 droit, bit2 milieu |
+| 0x02 | DX | delta X (int8, remis à zéro à la lecture) |
+| 0x03 | DY | delta Y (int8, remis à zéro à la lecture) |
+
+L'hôte écrit l'index de registre puis lit N octets. Détails : [`software/README.md`](software/README.md).
+
+Côté bus : seulement **SDA (GP28), SCL (GP29) et GND** entre le trackball et l'hôte,
+avec une **masse commune obligatoire**. Les **pull-ups (~2,2–4,7 kΩ) sont fournis par
+l'hôte** — rien à ajouter côté trackball.
+
+### Alimentation : USB ou hôte I2C
+
+Le trackball peut être alimenté de deux façons, au choix :
+
+- **par son USB-C** (il reste aussi une souris USB) ;
+- **par le 3,3 V de l'hôte** via le connecteur I2C (module pur, sans USB).
+
+Le RP2040-Zero n'a pas de broche `3V3_EN` : on ne peut pas couper son régulateur
+interne. Relier directement le 3,3 V de l'hôte au pad `3V3` **pendant que l'USB est
+branché** ferait se battre deux sources. Pour permettre **l'un ou l'autre sans
+risque**, intercaler une **diode Schottky** (OR-ing) sur la ligne 3,3 V :
+
+```
+  Hôte +3V3 ──►|── pad 3V3 (RP2040-Zero)
+             Schottky            (anode = hôte, cathode = carte)
+
+  SDA(GP28), SCL(GP29), GND : câblés directement
+```
+
+- **USB branché** → le régulateur interne alimente la carte, la diode est bloquée
+  (pas de retour vers l'hôte).
+- **USB absent** → l'hôte alimente la carte à travers la diode (~3,0 V après la
+  chute Schottky ; OK pour le RP2040 et le PMW3610).
+
+Diodes adaptées (I_F ≥ 0,5 A, V_f faible, V_r 20–40 V) :
+
+| Type | Références |
+| --- | --- |
+| CMS | **PMEG2010ER**, MBR0520L, SS14, B5819W |
+| Traversant | **1N5817**, 1N5819 |
+
+Pour le **3,3 V plein** (chute quasi nulle), remplacer la diode par un *ideal-diode*
+(**LM66100**, TPS22860). Dans tous les cas : **ne pas relier** les rails 3V3 des deux
+cartes autrement que par cette diode, et **ne pas** brancher l'USB en même temps que
+l'alimentation par l'hôte si tu utilises un simple cavalier au lieu de la diode.
 
 ## Utilisation
 

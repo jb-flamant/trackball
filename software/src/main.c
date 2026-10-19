@@ -9,6 +9,7 @@
  */
 
 #include "usb.h"
+#include "i2c_target.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
@@ -78,12 +79,15 @@ static void input_cb(struct input_event *evt, void *user_data)
 	switch (evt->code) {
 	case INPUT_BTN_LEFT:
 		WRITE_BIT(mouse_buttons, 0, evt->value);
+		app_i2c_target_feed(0, 0, mouse_buttons);
 		break;
 	case INPUT_BTN_RIGHT:
 		WRITE_BIT(mouse_buttons, 1, evt->value);
+		app_i2c_target_feed(0, 0, mouse_buttons);
 		break;
 	case INPUT_BTN_MIDDLE:
 		WRITE_BIT(mouse_buttons, 2, evt->value);
+		app_i2c_target_feed(0, 0, mouse_buttons);
 		break;
 	case INPUT_KEY_SCROLLLOCK:
 		/* Bascule le mode molette sur l'appui ; non transmis a l'hote. */
@@ -94,12 +98,15 @@ static void input_cb(struct input_event *evt, void *user_data)
 		}
 		return;
 	case INPUT_REL_X:
+		/* L'I2C recoit toujours le mouvement brut (independant du mode molette). */
+		app_i2c_target_feed(evt->value, 0, mouse_buttons);
 		/* En mode molette, l'axe X est ignore (pan horizontal non gere). */
 		if (!scroll_mode) {
 			report[MOUSE_X_REPORT_IDX] = clamp_delta(evt->value);
 		}
 		break;
 	case INPUT_REL_Y:
+		app_i2c_target_feed(0, evt->value, mouse_buttons);
 		if (scroll_mode) {
 			/* Accumulation puis conversion en crans de molette. */
 			scroll_accum += evt->value;
@@ -205,6 +212,9 @@ int main(void)
 		LOG_WRN("Capteur PMW3610 NON pret : souris sans mouvement "
 			"(verifier cablage SPI / pont MOSI-MISO)");
 	}
+
+	/* Sortie I2C target (non bloquante : absente si le bus n'est pas pret). */
+	(void)app_i2c_target_init();
 
 	while (true) {
 		UDC_STATIC_BUF_DEFINE(report, MOUSE_REPORT_COUNT);
