@@ -108,6 +108,46 @@ I2C (mode target, adresse **0x54** par défaut). Carte de registres (auto-incré
 
 L'hôte écrit l'index de registre puis lit N octets. Détails : [`software/README.md`](software/README.md).
 
+Côté bus : seulement **SDA (GP28), SCL (GP29) et GND** entre le trackball et l'hôte,
+avec une **masse commune obligatoire**. Les **pull-ups (~2,2–4,7 kΩ) sont fournis par
+l'hôte** — rien à ajouter côté trackball.
+
+### Alimentation : USB ou hôte I2C
+
+Le trackball peut être alimenté de deux façons, au choix :
+
+- **par son USB-C** (il reste aussi une souris USB) ;
+- **par le 3,3 V de l'hôte** via le connecteur I2C (module pur, sans USB).
+
+Le RP2040-Zero n'a pas de broche `3V3_EN` : on ne peut pas couper son régulateur
+interne. Relier directement le 3,3 V de l'hôte au pad `3V3` **pendant que l'USB est
+branché** ferait se battre deux sources. Pour permettre **l'un ou l'autre sans
+risque**, intercaler une **diode Schottky** (OR-ing) sur la ligne 3,3 V :
+
+```
+  Hôte +3V3 ──►|── pad 3V3 (RP2040-Zero)
+             Schottky            (anode = hôte, cathode = carte)
+
+  SDA(GP28), SCL(GP29), GND : câblés directement
+```
+
+- **USB branché** → le régulateur interne alimente la carte, la diode est bloquée
+  (pas de retour vers l'hôte).
+- **USB absent** → l'hôte alimente la carte à travers la diode (~3,0 V après la
+  chute Schottky ; OK pour le RP2040 et le PMW3610).
+
+Diodes adaptées (I_F ≥ 0,5 A, V_f faible, V_r 20–40 V) :
+
+| Type | Références |
+| --- | --- |
+| CMS | **PMEG2010ER**, MBR0520L, SS14, B5819W |
+| Traversant | **1N5817**, 1N5819 |
+
+Pour le **3,3 V plein** (chute quasi nulle), remplacer la diode par un *ideal-diode*
+(**LM66100**, TPS22860). Dans tous les cas : **ne pas relier** les rails 3V3 des deux
+cartes autrement que par cette diode, et **ne pas** brancher l'USB en même temps que
+l'alimentation par l'hôte si tu utilises un simple cavalier au lieu de la diode.
+
 ## Utilisation
 
 Ouvrir `hardware/trackball.scad` dans [OpenSCAD](https://openscad.org/) (≥ 2021.01). La

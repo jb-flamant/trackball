@@ -105,6 +105,13 @@ côté `input` est protégée par `irq_lock()`.
 > ⚠️ Adresse et carte de registres = **contrat avec l'hôte** : à adapter si le
 > contrôleur attend un protocole précis. Non encore testé sur cible.
 
+**Bus / alimentation.** Entre le trackball et l'hôte : uniquement **SDA, SCL et GND**
+(masse commune obligatoire), pull-ups côté hôte. Le trackball peut être alimenté par
+son **USB-C** ou par le **3,3 V de l'hôte** (module pur) ; pour permettre l'un ou
+l'autre sans conflit (le RP2040-Zero n'a pas de `3V3_EN`), intercaler une **diode
+Schottky** d'OR-ing sur la ligne 3,3 V — voir « Alimentation : USB ou hôte I2C » dans
+le [README racine](../README.md).
+
 ## Arborescence
 
 ```
